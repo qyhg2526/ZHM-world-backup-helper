@@ -1,0 +1,21 @@
+name: ZHMWorldBackupHelper
+prefix: ZHM world backup helper
+version: '1.0.1'
+main: com.dsh.worldbackup.WorldBackupPlugin
+api-version: '26.2'
+description: 使用 7z 压缩备份服务器存档，支持 WebDAV 网盘上传、自动保留策略，并在 BOSS 血条与后台显示备份进度。
+authors: [DSH]
+website: https://papermc.io
+commands:
+  worldbackup:
+    description: 存档备份管理命令
+    usage: '/worldbackup <backupnow|status|list|clean|reload|cancel>'
+permissions:
+  worldbackup.use:
+    description: 允许查看备份状态与备份列表
+    default: op
+  worldbackup.admin:
+    description: 允许执行备份、清理、重载与取消
+    default: op
+    children:
+      worldbackup.use: true

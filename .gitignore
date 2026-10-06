@@ -1,0 +1,31 @@
+# ---------------------------------------------------------------- 构建产物
+build/
+dist/
+target/
+out/
+.gradle/
+
+# 本地依赖缓存（build.ps1 会自动从 Maven 仓库下载）
+libs/
+
+# 实测用 Paper 服务端（含 60+ MB 服务端 jar 与存档，切勿提交）
+testserver/
+
+# ---------------------------------------------------------------- IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+nbproject/
+
+# ---------------------------------------------------------------- 系统与日志
+*.log
+*.err
+logs/
+.DS_Store
+Thumbs.db
+desktop.ini

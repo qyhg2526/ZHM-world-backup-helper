@@ -1,0 +1,160 @@
+# ==========================================================================
+#  ZHM world backup helper  v1.0.1  ——  Paper 26.2 存档备份插件
+#  · 使用 7z 压缩 world 存档，显著减小备份体积
+#  · 可自动上传到 WebDAV 网盘（坚果云 / Nextcloud / Alist / 群晖 等）
+#  · 上传成功后可自动删除本地压缩包
+#  · 自动检测本地备份数量并按保留策略清理旧备份
+#  · 备份进度同时显示在 BOSS 血条栏与服务器后台
+#  手动备份：/worldbackup backupnow      重载配置：/worldbackup reload
+#  （压缩引擎相关配置变更后建议重启服务器）
+# ==========================================================================
+
+config-version: 1
+
+backup:
+  # 需要备份的文件夹，相对服务器根目录（也可写绝对路径）
+  # 注意：Paper 26.1 起，下界/末地已合并进 world/dimensions/，一般只需备份 world
+  worlds:
+    - world
+  # 自动追加仍然单独存在的旧版维度文件夹（world_nether / world_the_end）
+  # 26.1+ 的服务器上这些文件夹通常不存在，检测不到会自动忽略
+  auto-detect-extra-worlds: true
+  # 文件夹不存在时：true=跳过并警告；false=整个任务失败
+  skip-missing: true
+  # 备份文件输出目录（相对服务器根目录）
+  output-dir: backups
+  # 文件名格式，支持 %WORLD% 与 %TIMESTAMP%
+  file-name-format: '%WORLD%-%TIMESTAMP%'
+  # 时间戳格式
+  timestamp-format: 'yyyy-MM-dd_HH-mm-ss'
+  # 安全模式：备份前执行 save-off + save-all flush，备份结束后 save-on
+  # 强烈建议保持开启，否则运行中的世界可能出现区块不一致
+  safe-mode: true
+  # save-all flush 之后额外等待的毫秒数，确保数据落盘
+  flush-wait-millis: 1500
+  # 排除的文件 / 文件夹（支持 * 与 ? 通配符，同时匹配文件名与相对路径）
+  exclude:
+    - 'session.lock'
+    - '*.tmp'
+    - '.DS_Store'
+  # 单个任务超时时间（分钟），0 = 不限制
+  timeout-minutes: 120
+  # 备份开始 / 结束时全服公告
+  announce: true
+
+compression:
+  # 压缩引擎：
+  #   AUTO               = 优先使用系统 7-Zip 命令行，找不到则用内置 7z(LZMA2) 引擎
+  #   SEVEN_ZIP_CLI      = 强制使用系统 7-Zip / 7zr / 7za / p7zip
+  #   SEVEN_ZIP_EMBEDDED = 强制使用插件内置的 7z(LZMA2) 引擎，无需安装 7-Zip
+  #   ZIP                = 使用 JDK 自带 zip（体积最大，仅作兜底）
+  mode: AUTO
+  # 7z 可执行文件路径；留空则自动探测 PATH 与常见安装目录
+  seven-zip-path: ''
+  # 压缩等级 0-9（9 体积最小，速度最慢）
+  level: 9
+  # 固实压缩，仅命令行 7z 支持；开启后同类文件共享字典，体积更小
+  solid: true
+  # 允许压缩正被服务端占用的文件（7-Zip 的 -ssw 参数）
+  # Windows 上必须保持开启，否则正在运行的区块文件会被跳过，导致备份不完整！
+  compress-locked-files: true
+  # 7-Zip 返回“警告”时是否判定备份失败（true = 删除压缩包并报错）
+  # 警告通常意味着有文件被跳过，保持 true 可以避免上传不完整的备份
+  fail-on-warning: true
+  # 传给 7z 的额外参数，例如：
+  #   - '-m0=lzma2:d=64m'   调整字典大小
+  #   - '-ssw'              允许压缩正在写入的文件
+  extra-args: []
+
+upload:
+  # 是否启用 WebDAV 上传
+  enabled: false
+  # WebDAV 目录地址，必须以 / 结尾（示例：坚果云）
+  #   https://dav.jianguoyun.com/dav/我的坚果云/minecraft-backup/
+  # Nextcloud: https://cloud.example.com/remote.php/dav/files/用户名/backups/
+  # Alist:     http://127.0.0.1:5244/dav/backups/
+  url: ''
+  username: ''
+  password: ''
+  # 上传成功后删除本地压缩包（上传失败时不会删除）
+  delete-local-after-upload: true
+  # 允许不受信任的 TLS 证书（自签名证书的私有网盘）
+  allow-insecure-tls: false
+  connect-timeout-seconds: 30
+  # 单次上传请求超时（分钟）
+  request-timeout-minutes: 120
+  # 失败重试次数（不含首次尝试）
+  retry-count: 3
+  retry-delay-seconds: 10
+  # 上传完成后在网盘上保留的备份数量，0 = 不清理远端
+  # 需要网盘支持 PROPFIND / DELETE，脚本按最后修改时间保留最新的 N 个
+  keep-remote-count: 0
+
+retention:
+  # 是否启用本地备份自动清理
+  enabled: true
+  # 本地保留的备份数量（超出部分自动删除，保留最新的）
+  keep-count: 5
+  # 超过多少天的备份也一并删除，0 = 不按时间清理
+  max-age-days: 0
+  # 只清理符合该通配符的文件（相对 output-dir）
+  file-pattern: '*.7z'
+  # 服务器启动时先清理一次
+  run-on-startup: true
+
+auto-backup:
+  # 定时自动备份
+  enabled: false
+  # 间隔备份（分钟），0 = 不使用间隔模式
+  interval-minutes: 360
+  # 服务器启动后首次备份延迟（分钟）
+  first-delay-minutes: 5
+  # 每天固定时刻备份，24 小时制，例如 ['04:00', '16:00']
+  daily-times: []
+  # 没有玩家在线时跳过自动备份
+  skip-when-empty: false
+
+progress:
+  # 在 BOSS 血条栏显示进度
+  boss-bar: true
+  # 血条标题，支持 %STAGE% %PERCENT% %DETAIL% 与 & 颜色代码
+  boss-bar-title: '&b存档备份 &8| &f%STAGE% &7%PERCENT%% &8%detail%'
+  # PINK / BLUE / RED / GREEN / YELLOW / PURPLE / WHITE
+  boss-bar-color: BLUE
+  # SOLID / SEGMENTED_6 / SEGMENTED_10 / SEGMENTED_12 / SEGMENTED_20
+  boss-bar-style: SEGMENTED_20
+  # 在服务器后台输出进度
+  console: true
+  # 后台进度输出间隔（秒）
+  console-interval-seconds: 5
+
+# 备份完成 / 失败后以控制台身份执行的命令，支持 %FILE% %SIZE% %DURATION%
+after-backup-commands: []
+
+messages:
+  prefix: '&8[&bZHM备份&8] &r'
+  no-permission: '&c你没有权限执行该命令。'
+  already-running: '&e已有备份任务正在运行（%STAGE% %PERCENT%%），请稍后再试。'
+  started: '&a已开始备份，触发方式：&f%TRIGGER%&a。'
+  not-running: '&7当前没有正在运行的备份任务。&7上次备份：&f%LAST%'
+  cancelled: '&e已请求取消当前备份任务。'
+  cancel-unsupported: '&e当前阶段无法取消，请稍候。'
+  success: '&a备份完成：&f%FILE% &7(%SIZE%，用时 %DURATION%)'
+  failed: '&c备份失败：&f%REASON%'
+  broadcast-start: '&e[备份] 服务器正在备份存档，期间可能出现短暂卡顿，请稍候…'
+  broadcast-success: '&a[备份] 存档备份完成，大小 %SIZE%，用时 %DURATION%。'
+  broadcast-failed: '&c[备份] 存档备份失败，请联系管理员。'
+  reloaded: '&a配置文件已重载。'
+  clean-result: '&a清理完成：删除 &f%DELETED% &a个旧备份，当前保留 &f%KEPT% &a个。'
+  remote-clean: '&a网盘清理完成：删除 &f%DELETED% &a个远端备份。'
+  list-header: '&8&m--------&r &b本地备份列表 &8&m--------'
+  list-entry: '&7%INDEX%. &f%NAME% &8| &7%SIZE% &8| &7%DATE%'
+  list-empty: '&7暂无本地备份文件。'
+  list-footer: '&7共 &f%COUNT% &7个备份，占用 &f%TOTAL%&7。'
+  status-idle: '&7当前空闲。上次备份：&f%LAST%'
+  status-running: '&e正在备份 &8| &f%STAGE% &8| &f%PERCENT%% &8| &f%DETAIL%'
+  uploading: '&7正在上传到网盘…'
+  upload-done: '&a上传完成：&f%REMOTE% &7(%SIZE%，用时 %DURATION%)'
+  upload-skipped: '&7未启用 WebDAV 上传，备份保留在本地。'
+  delete-local: '&7已按配置删除本地压缩包：&f%FILE%'
+  unknown-command: '&c未知子命令。用法：&f/worldbackup <backupnow|status|list|clean|reload|cancel>'

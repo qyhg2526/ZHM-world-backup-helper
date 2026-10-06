@@ -1,0 +1,14 @@
+# 默认按文本处理，仓库内统一使用 LF
+* text=auto
+
+# 构建脚本带 UTF-8 BOM 且使用 CRLF，禁止换行符转换，避免 PowerShell 5.1 解析中文注释出错
+*.ps1 -text
+*.bat -text
+*.cmd -text
+
+# 二进制文件
+*.jar binary
+*.7z binary
+*.zip binary
+*.png binary
+*.ico binary

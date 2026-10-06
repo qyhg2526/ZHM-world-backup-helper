@@ -1,0 +1,47 @@
+name: build
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: 使用 Maven 构建
+        run: mvn -B clean package
+
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZHM-world-backup-helper
+          path: target/ZHM-world-backup-helper-*.jar
+          if-no-files-found: error
+
+      - name: 发布 Release（仅打 tag 时）
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/ZHM-world-backup-helper-*.jar
+          generate_release_notes: true
+          body: |
+            Paper 26.2 存档备份插件（需要 Java 25）。
+
+            下载下方的 `ZHM-world-backup-helper-*.jar`，放入服务器 `plugins/` 目录后重启即可。
+            使用说明见仓库 [README](https://github.com/${{ github.repository }}#readme)。
