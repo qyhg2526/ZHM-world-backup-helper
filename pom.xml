@@ -32,10 +32,25 @@
             <scope>provided</scope>
         </dependency>
         <!-- 内置 7z(LZMA2) 压缩引擎，会一起打进插件 jar -->
+        <!-- 排除传递依赖：内置引擎只使用 7z 写入路径，不需要 commons-io / codec / lang3 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
             <version>1.28.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-io</groupId>
+                    <artifactId>commons-io</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>commons-codec</groupId>
+                    <artifactId>commons-codec</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.commons</groupId>
+                    <artifactId>commons-lang3</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.tukaani</groupId>
@@ -84,6 +99,9 @@
                                         <exclude>META-INF/*.DSA</exclude>
                                         <exclude>META-INF/*.RSA</exclude>
                                         <exclude>META-INF/MANIFEST.MF</exclude>
+                                        <exclude>META-INF/maven/**</exclude>
+                                        <exclude>META-INF/LICENSE*</exclude>
+                                        <exclude>META-INF/NOTICE*</exclude>
                                     </excludes>
                                 </filter>
                             </filters>

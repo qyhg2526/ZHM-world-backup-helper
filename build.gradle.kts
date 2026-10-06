@@ -13,7 +13,12 @@ repositories {
 dependencies {
     compileOnly("io.papermc.paper:paper-api:26.2.build.130-stable")
     // 内置 7z(LZMA2) 压缩引擎，会一起打进插件 jar
-    implementation("org.apache.commons:commons-compress:1.28.0")
+    // 排除传递依赖：内置引擎只使用 7z 写入路径，不需要 commons-io / codec / lang3
+    implementation("org.apache.commons:commons-compress:1.28.0") {
+        exclude(group = "commons-io", module = "commons-io")
+        exclude(group = "commons-codec", module = "commons-codec")
+        exclude(group = "org.apache.commons", module = "commons-lang3")
+    }
     implementation("org.tukaani:xz:1.10")
 }
 
